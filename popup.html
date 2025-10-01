@@ -17,13 +17,11 @@
             <!-- LinkedIn Profile Section -->
             <section class="section">
                 <h2>LinkedIn Profile</h2>
-                <div class="button-group">
-                    <button id="fetchProfileBtn" class="btn btn-primary">
-                        <span class="btn-icon">📋</span>
-                        Fetch LinkedIn Profile
-                    </button>
-                    <div id="profileStatus" class="status-message"></div>
-                </div>
+                <button id="fetchProfileBtn" class="btn btn-primary">
+                    <span class="btn-icon">📋</span>
+                    Fetch Profile Data
+                </button>
+                <div id="profileStatus" class="status-message"></div>
             </section>
 
             <!-- Profile Data Display -->
@@ -52,12 +50,12 @@
 
             <!-- CV Upload Section -->
             <section class="section">
-                <h2>CV Upload & Parsing</h2>
+                <h2>CV Upload</h2>
                 <div class="upload-area" id="uploadArea">
                     <div class="upload-content">
                         <div class="upload-icon">📄</div>
-                        <p>Drop your CV here or click to browse</p>
-                        <p class="upload-hint">Supports PDF and DOCX files</p>
+                        <p>Drop CV or click to browse</p>
+                        <p class="upload-hint">PDF & DOCX supported</p>
                     </div>
                     <input type="file" id="cvFileInput" accept=".pdf,.docx" style="display: none;">
                 </div>
@@ -85,16 +83,14 @@
 
             <!-- Action Buttons -->
             <section class="section">
-                <div class="button-group">
-                    <button id="copyToClipboardBtn" class="btn btn-secondary">
-                        <span class="btn-icon">📋</span>
-                        Copy to Clipboard
-                    </button>
-                    <button id="clearDataBtn" class="btn btn-outline">
-                        <span class="btn-icon">🗑️</span>
-                        Clear Data
-                    </button>
-                </div>
+                <button id="copyToClipboardBtn" class="btn btn-secondary">
+                    <span class="btn-icon">📋</span>
+                    Copy to Clipboard
+                </button>
+                <button id="clearDataBtn" class="btn btn-outline">
+                    <span class="btn-icon">🗑️</span>
+                    Clear Data
+                </button>
             </section>
 
             <!-- Instructions -->
