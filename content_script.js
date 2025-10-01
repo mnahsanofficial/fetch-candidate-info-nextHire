@@ -397,7 +397,7 @@
     try {
       console.log('Looking for contact info...');
       
-      // First try to find and click the contact info button to open modal
+      // Strategy 1: Try to find and click the contact info button
       const contactButtonSelectors = [
         'button[aria-label*="Contact info"]',
         'button[aria-label*="Contact"]',
@@ -406,24 +406,97 @@
         'button[data-control-name="contact_see_more"]',
         '.pv-s-profile-actions button',
         'button[data-control-name="contact_see_more"]',
-        'button[aria-label*="contact"]'
+        'button[aria-label*="contact"]',
+        // Additional selectors for current LinkedIn
+        'button[data-control-name="contact_see_more"]',
+        '.pv-s-profile-actions__action--contact',
+        'button[aria-label*="Show contact info"]',
+        'button[aria-label*="View contact info"]',
+        'button[aria-label*="See contact info"]',
+        // Try to find any button with "contact" in text
+        'button:has-text("Contact")',
+        'a:has-text("Contact")',
+        // More specific selectors
+        '.pv-s-profile-actions__action[data-control-name="contact_see_more"]',
+        '.pv-s-profile-actions__action--contact[data-control-name="contact_see_more"]'
       ];
 
       let contactButton = null;
       for (const selector of contactButtonSelectors) {
-        contactButton = document.querySelector(selector);
-        if (contactButton) {
-          console.log('Found contact button with selector:', selector);
-          break;
+        try {
+          contactButton = document.querySelector(selector);
+          if (contactButton) {
+            console.log('Found contact button with selector:', selector);
+            break;
+          }
+        } catch (e) {
+          // Skip invalid selectors
+          continue;
+        }
+      }
+
+      // If no button found with selectors, try to find by text content
+      if (!contactButton) {
+        console.log('No contact button found with selectors, searching by text...');
+        const allButtons = document.querySelectorAll('button, a');
+        for (const button of allButtons) {
+          const text = button.textContent.toLowerCase();
+          if (text.includes('contact') && (text.includes('info') || text.includes('see') || text.includes('view'))) {
+            contactButton = button;
+            console.log('Found contact button by text:', text);
+            break;
+          }
         }
       }
 
       if (contactButton) {
         console.log('Clicking contact info button...');
-        contactButton.click();
+        try {
+          // Try multiple click methods
+          contactButton.click();
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          // If modal didn't open, try dispatching events
+          if (!document.querySelector('.pv-contact-info__contact-type, .ci-v2-modal, .contact-info-modal')) {
+            console.log('Modal not opened, trying dispatch events...');
+            contactButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+          
+          // Try focus and enter key
+          if (!document.querySelector('.pv-contact-info__contact-type, .ci-v2-modal, .contact-info-modal')) {
+            console.log('Trying focus and enter key...');
+            contactButton.focus();
+            contactButton.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+          
+        } catch (e) {
+          console.log('Error clicking contact button:', e);
+        }
+      } else {
+        console.log('No contact button found');
         
-        // Wait for modal to open
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Strategy: Try to find and click any element that might open contact info
+        console.log('Trying to find contact info by searching all clickable elements...');
+        const clickableElements = document.querySelectorAll('button, a, [role="button"], [onclick]');
+        for (const element of clickableElements) {
+          const text = element.textContent.toLowerCase();
+          const ariaLabel = element.getAttribute('aria-label')?.toLowerCase() || '';
+          const title = element.getAttribute('title')?.toLowerCase() || '';
+          
+          if ((text.includes('contact') || ariaLabel.includes('contact') || title.includes('contact')) &&
+              (text.includes('info') || ariaLabel.includes('info') || title.includes('info'))) {
+            console.log('Found potential contact element:', text, ariaLabel, title);
+            try {
+              element.click();
+              await new Promise(resolve => setTimeout(resolve, 2000));
+              break;
+            } catch (e) {
+              console.log('Error clicking potential contact element:', e);
+            }
+          }
+        }
       }
 
       // Check if contact info modal is open
@@ -499,13 +572,13 @@
       } else {
         console.log('No contact modal found, trying direct selectors...');
         
-        // Try to find contact info directly on the page
+        // Strategy 2: Try to find contact info directly on the page
         const emailElement = document.querySelector('a[href^="mailto:"]');
         if (emailElement) {
           contactInfo.email = emailElement.href.replace('mailto:', '');
           console.log('Found email directly:', contactInfo.email);
         } else {
-          console.log('No email found');
+          console.log('No email found directly');
         }
 
         const phoneElement = document.querySelector('a[href^="tel:"]');
@@ -513,8 +586,50 @@
           contactInfo.phone = phoneElement.href.replace('tel:', '');
           console.log('Found phone directly:', contactInfo.phone);
         } else {
-          console.log('No phone found');
+          console.log('No phone found directly');
         }
+
+        // Strategy 3: Try to find contact info in hidden elements or data attributes
+        console.log('Searching for hidden contact info...');
+        const allElements = document.querySelectorAll('*');
+        for (const element of allElements) {
+          const text = element.textContent;
+          
+          // Look for email patterns
+          const emailMatch = text.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
+          if (emailMatch && !contactInfo.email) {
+            contactInfo.email = emailMatch[1];
+            console.log('Found email in text:', contactInfo.email);
+          }
+          
+          // Look for phone patterns (various formats)
+          const phoneMatch = text.match(/(\+?[\d\s\-\(\)]{10,})/);
+          if (phoneMatch && !contactInfo.phone) {
+            const phone = phoneMatch[1].replace(/[\s\-\(\)]/g, '');
+            if (phone.length >= 10 && phone.length <= 15) {
+              contactInfo.phone = phoneMatch[1];
+              console.log('Found phone in text:', contactInfo.phone);
+            }
+          }
+        }
+
+        // Strategy 4: Try to find contact info in data attributes
+        console.log('Searching data attributes for contact info...');
+        const elementsWithData = document.querySelectorAll('[data-email], [data-phone], [data-contact-email], [data-contact-phone]');
+        elementsWithData.forEach(element => {
+          const email = element.getAttribute('data-email') || element.getAttribute('data-contact-email');
+          const phone = element.getAttribute('data-phone') || element.getAttribute('data-contact-phone');
+          
+          if (email && !contactInfo.email) {
+            contactInfo.email = email;
+            console.log('Found email in data attribute:', contactInfo.email);
+          }
+          
+          if (phone && !contactInfo.phone) {
+            contactInfo.phone = phone;
+            console.log('Found phone in data attribute:', contactInfo.phone);
+          }
+        });
 
         const websiteElements = document.querySelectorAll('a[href^="http"]:not([href*="linkedin.com"])');
         console.log('Found', websiteElements.length, 'website links directly');
