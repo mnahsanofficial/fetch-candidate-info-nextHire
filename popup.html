@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinkedIn Contact Extractor</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>LinkedIn Contact Extractor</h1>
+            <p class="subtitle">Extract candidate information from LinkedIn profiles and CVs</p>
+        </header>
+
+        <main class="main-content">
+            <!-- LinkedIn Profile Section -->
+            <section class="section">
+                <h2>LinkedIn Profile</h2>
+                <div class="button-group">
+                    <button id="fetchProfileBtn" class="btn btn-primary">
+                        <span class="btn-icon">📋</span>
+                        Fetch LinkedIn Profile
+                    </button>
+                    <div id="profileStatus" class="status-message"></div>
+                </div>
+            </section>
+
+            <!-- Profile Data Display -->
+            <section class="section" id="profileDataSection" style="display: none;">
+                <h2>Extracted Profile Data</h2>
+                <div class="form-group">
+                    <label for="name">Name:</label>
+                    <input type="text" id="name" class="form-input" readonly>
+                </div>
+                
+                <div class="form-group">
+                    <label for="experience">Total Years of Experience:</label>
+                    <input type="text" id="experience" class="form-input" readonly>
+                </div>
+                
+                <div class="form-group">
+                    <label for="techStack">Tech Stack:</label>
+                    <textarea id="techStack" class="form-textarea" readonly placeholder="No skills found"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="contactInfo">Contact Info:</label>
+                    <textarea id="contactInfo" class="form-textarea" readonly placeholder="No contact info found"></textarea>
+                </div>
+            </section>
+
+            <!-- CV Upload Section -->
+            <section class="section">
+                <h2>CV Upload & Parsing</h2>
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-content">
+                        <div class="upload-icon">📄</div>
+                        <p>Drop your CV here or click to browse</p>
+                        <p class="upload-hint">Supports PDF and DOCX files</p>
+                    </div>
+                    <input type="file" id="cvFileInput" accept=".pdf,.docx" style="display: none;">
+                </div>
+                <div id="cvStatus" class="status-message"></div>
+            </section>
+
+            <!-- CV Parsed Data -->
+            <section class="section" id="cvDataSection" style="display: none;">
+                <h2>Parsed CV Data</h2>
+                <div class="form-group">
+                    <label for="cvName">Name:</label>
+                    <input type="text" id="cvName" class="form-input">
+                </div>
+                
+                <div class="form-group">
+                    <label for="cvContact">Contact Info:</label>
+                    <textarea id="cvContact" class="form-textarea" placeholder="Email, phone, websites..."></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="cvSkills">Skills/Keywords:</label>
+                    <textarea id="cvSkills" class="form-textarea" placeholder="Extracted skills and keywords..."></textarea>
+                </div>
+            </section>
+
+            <!-- Action Buttons -->
+            <section class="section">
+                <div class="button-group">
+                    <button id="copyToClipboardBtn" class="btn btn-secondary">
+                        <span class="btn-icon">📋</span>
+                        Copy to Clipboard
+                    </button>
+                    <button id="clearDataBtn" class="btn btn-outline">
+                        <span class="btn-icon">🗑️</span>
+                        Clear Data
+                    </button>
+                </div>
+            </section>
+
+            <!-- Instructions -->
+            <section class="section instructions">
+                <h3>How to use:</h3>
+                <ol>
+                    <li>Navigate to a LinkedIn profile page</li>
+                    <li>Click "Fetch LinkedIn Profile" to extract visible data</li>
+                    <li>Optionally upload a CV for additional contact info</li>
+                    <li>Review and edit the extracted data</li>
+                    <li>Click "Copy to Clipboard" to copy the information</li>
+                </ol>
+            </section>
+        </main>
+
+        <footer class="footer">
+            <p>LinkedIn Contact Extractor v1.0.0</p>
+        </footer>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html>
