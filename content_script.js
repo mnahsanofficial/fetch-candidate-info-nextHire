@@ -125,15 +125,34 @@
       
       if (experienceSection) {
         console.log('Found experience section');
+        console.log('Experience section HTML:', experienceSection.innerHTML.substring(0, 500));
+        
         // Find all experience entries
         const experienceEntries = experienceSection.querySelectorAll('.pv-entity__date-range, .pvs-entity__caption-wrapper, .pv-entity__dates, .experience-item__duration, .pv-entity__summary-info-v2 .pv-entity__dates');
         console.log('Found', experienceEntries.length, 'experience entries in section');
         
-        experienceEntries.forEach(entry => {
-          const dateText = entry.textContent;
-          const months = parseExperienceDuration(dateText);
-          totalMonths += months;
-        });
+        // If no entries found, try to find any elements with date-like content
+        if (experienceEntries.length === 0) {
+          console.log('No experience entries found, looking for any date-like elements...');
+          const allElements = experienceSection.querySelectorAll('*');
+          allElements.forEach(element => {
+            const text = element.textContent.trim();
+            if (text && (text.includes('202') || text.includes('year') || text.includes('month') || text.includes('present') || text.includes('current'))) {
+              console.log('Found potential date element:', text, 'in', element.tagName, element.className);
+              const months = parseExperienceDuration(text);
+              if (months > 0) {
+                totalMonths += months;
+                console.log('Added', months, 'months from:', text);
+              }
+            }
+          });
+        } else {
+          experienceEntries.forEach(entry => {
+            const dateText = entry.textContent;
+            const months = parseExperienceDuration(dateText);
+            totalMonths += months;
+          });
+        }
       } else {
         console.log('No experience section found, trying direct selectors...');
         // Try to find experience entries directly with updated selectors
@@ -236,6 +255,8 @@
       
       if (skillsSection) {
         console.log('Found skills section');
+        console.log('Skills section HTML:', skillsSection.innerHTML.substring(0, 500));
+        
         // Find skill elements with updated selectors
         const skillSelectors = [
           '.pv-skill-category-entity__name',
@@ -263,6 +284,24 @@
             }
           });
         });
+        
+        // If no skills found with selectors, try to find any text that looks like skills
+        if (skills.length === 0) {
+          console.log('No skills found with selectors, looking for any skill-like text...');
+          const allElements = skillsSection.querySelectorAll('*');
+          allElements.forEach(element => {
+            const text = element.textContent.trim();
+            if (text && text.length > 2 && text.length < 50 && !text.includes(' ') && 
+                (text.includes('Script') || text.includes('Java') || text.includes('Python') || 
+                 text.includes('React') || text.includes('Node') || text.includes('SQL') ||
+                 text.includes('HTML') || text.includes('CSS') || text.includes('Git'))) {
+              console.log('Found potential skill:', text, 'in', element.tagName, element.className);
+              if (!skills.includes(text)) {
+                skills.push(text);
+              }
+            }
+          });
+        }
       } else {
         console.log('No skills section found, trying direct selectors...');
         // Try direct selectors if no section found
@@ -314,6 +353,9 @@
       if (aboutSection) {
         const aboutText = aboutSection.textContent.toLowerCase();
         console.log('About section text length:', aboutText.length);
+        console.log('About section text:', aboutSection.textContent);
+        console.log('About section HTML:', aboutSection.innerHTML.substring(0, 500));
+        
         const techKeywords = [
           'javascript', 'python', 'java', 'react', 'angular', 'vue', 'node.js', 'express',
           'mongodb', 'mysql', 'postgresql', 'aws', 'azure', 'docker', 'kubernetes',
@@ -363,8 +405,8 @@
         '.pv-s-profile-actions__action',
         'button[data-control-name="contact_see_more"]',
         '.pv-s-profile-actions button',
-        'button:contains("Contact info")',
-        'button:contains("Contact")'
+        'button[data-control-name="contact_see_more"]',
+        'button[aria-label*="contact"]'
       ];
 
       let contactButton = null;
