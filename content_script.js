@@ -133,16 +133,27 @@
         
         // If no entries found, try to find any elements with date-like content
         if (experienceEntries.length === 0) {
-          console.log('No experience entries found, looking for any date-like elements...');
+          console.log('No experience entries found, looking for job experience dates...');
           const allElements = experienceSection.querySelectorAll('*');
+          const processedTexts = new Set(); // Avoid duplicate processing
+          
           allElements.forEach(element => {
             const text = element.textContent.trim();
-            if (text && (text.includes('202') || text.includes('year') || text.includes('month') || text.includes('present') || text.includes('current'))) {
-              console.log('Found potential date element:', text, 'in', element.tagName, element.className);
-              const months = parseExperienceDuration(text);
-              if (months > 0) {
-                totalMonths += months;
-                console.log('Added', months, 'months from:', text);
+            // More specific filtering for job experience dates
+            if (text && text.length < 100 && // Reasonable length for date ranges
+                (text.match(/\d{4}\s*[-–]\s*(present|current|now|\d{4})/i) || // Date ranges
+                 text.match(/\d+\s*(year|yr|month|mo)/i) || // Duration
+                 text.match(/\d{4}\s*[-–]\s*\d{4}/))) { // Year ranges
+              
+              // Avoid processing the same text multiple times
+              if (!processedTexts.has(text)) {
+                processedTexts.add(text);
+                console.log('Found potential job date element:', text, 'in', element.tagName, element.className);
+                const months = parseExperienceDuration(text);
+                if (months > 0 && months < 600) { // Reasonable limit (50 years max)
+                  totalMonths += months;
+                  console.log('Added', months, 'months from:', text);
+                }
               }
             }
           });
@@ -150,7 +161,9 @@
           experienceEntries.forEach(entry => {
             const dateText = entry.textContent;
             const months = parseExperienceDuration(dateText);
-            totalMonths += months;
+            if (months > 0 && months < 600) { // Reasonable limit
+              totalMonths += months;
+            }
           });
         }
       } else {
@@ -210,18 +223,34 @@
    * Parse experience duration from text
    */
   function parseExperienceDuration(dateText) {
+    if (!dateText) return 0;
+    
     const text = dateText.toLowerCase();
     let months = 0;
-
+    
+    // Skip if text contains irrelevant content
+    if (text.includes('follower') || text.includes('connection') || text.includes('endorsement') || 
+        text.includes('recommendation') || text.includes('certificate') || text.includes('issued') ||
+        text.includes('managed') || text.includes('worked with') || text.includes('proficiency') ||
+        text.includes('native') || text.includes('professional') || text.includes('bilingual')) {
+      return 0;
+    }
+    
     // Extract years and months from text like "2 yrs 3 mos" or "Jan 2020 - Present"
     const yearMatch = text.match(/(\d+)\s*(?:year|yr|y)/);
     const monthMatch = text.match(/(\d+)\s*(?:month|mo|mos)/);
     
     if (yearMatch) {
-      months += parseInt(yearMatch[1]) * 12;
+      const years = parseInt(yearMatch[1]);
+      if (years > 0 && years <= 50) { // Reasonable limit
+        months += years * 12;
+      }
     }
     if (monthMatch) {
-      months += parseInt(monthMatch[1]);
+      const monthsValue = parseInt(monthMatch[1]);
+      if (monthsValue > 0 && monthsValue <= 12) { // Reasonable limit
+        months += monthsValue;
+      }
     }
 
     // If no explicit duration, try to parse date ranges
@@ -229,8 +258,16 @@
       const dateRangeMatch = text.match(/(\d{4})\s*[-–]\s*(?:present|current|now|\d{4})/);
       if (dateRangeMatch) {
         const startYear = parseInt(dateRangeMatch[1]);
-        const currentYear = new Date().getFullYear();
-        months = (currentYear - startYear) * 12;
+        const endYear = dateRangeMatch[2] === 'present' || dateRangeMatch[2] === 'current' || dateRangeMatch[2] === 'now' 
+          ? new Date().getFullYear() 
+          : parseInt(dateRangeMatch[2]);
+        
+        if (startYear > 1950 && endYear <= new Date().getFullYear() && endYear > startYear) {
+          const years = endYear - startYear;
+          if (years <= 50) { // Reasonable limit
+            months = years * 12;
+          }
+        }
       }
     }
 
@@ -287,17 +324,40 @@
         
         // If no skills found with selectors, try to find any text that looks like skills
         if (skills.length === 0) {
-          console.log('No skills found with selectors, looking for any skill-like text...');
+          console.log('No skills found with selectors, looking for actual skills...');
           const allElements = skillsSection.querySelectorAll('*');
+          const processedSkills = new Set();
+          
           allElements.forEach(element => {
             const text = element.textContent.trim();
-            if (text && text.length > 2 && text.length < 50 && !text.includes(' ') && 
+            // More specific filtering for actual skills
+            if (text && text.length > 2 && text.length < 30 && 
+                !text.includes('follower') && !text.includes('connection') && 
+                !text.includes('endorsement') && !text.includes('recommendation') &&
+                !text.includes('certificate') && !text.includes('issued') &&
+                !text.includes('managed') && !text.includes('worked with') &&
+                !text.includes('proficiency') && !text.includes('native') &&
+                !text.includes('professional') && !text.includes('bilingual') &&
+                !text.includes('year') && !text.includes('month') && !text.includes('202') &&
                 (text.includes('Script') || text.includes('Java') || text.includes('Python') || 
                  text.includes('React') || text.includes('Node') || text.includes('SQL') ||
-                 text.includes('HTML') || text.includes('CSS') || text.includes('Git'))) {
-              console.log('Found potential skill:', text, 'in', element.tagName, element.className);
-              if (!skills.includes(text)) {
-                skills.push(text);
+                 text.includes('HTML') || text.includes('CSS') || text.includes('Git') ||
+                 text.includes('JavaScript') || text.includes('TypeScript') || text.includes('PHP') ||
+                 text.includes('Ruby') || text.includes('Go') || text.includes('C++') ||
+                 text.includes('C#') || text.includes('.NET') || text.includes('Spring') ||
+                 text.includes('Django') || text.includes('Flask') || text.includes('Laravel') ||
+                 text.includes('Angular') || text.includes('Vue') || text.includes('Express') ||
+                 text.includes('MongoDB') || text.includes('MySQL') || text.includes('PostgreSQL') ||
+                 text.includes('AWS') || text.includes('Azure') || text.includes('Docker') ||
+                 text.includes('Kubernetes') || text.includes('Jenkins') || text.includes('Agile') ||
+                 text.includes('Scrum') || text.includes('Sass') || text.includes('Less'))) {
+              
+              if (!processedSkills.has(text)) {
+                processedSkills.add(text);
+                console.log('Found potential skill:', text, 'in', element.tagName, element.className);
+                if (!skills.includes(text)) {
+                  skills.push(text);
+                }
               }
             }
           });
