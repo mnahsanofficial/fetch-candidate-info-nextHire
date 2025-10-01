@@ -59,7 +59,14 @@
       'h1[data-generated-suggestion-target]',
       '.pv-text-details__left-panel h1',
       '.ph5 h1',
-      'h1.break-words'
+      'h1.break-words',
+      'h1[data-anonymize="person-name"]',
+      '.pv-text-details__left-panel h1 span[aria-hidden="true"]',
+      '.pv-text-details__left-panel h1 span:first-child',
+      'h1.break-words span[aria-hidden="true"]',
+      '.pv-text-details__left-panel h1',
+      '.pv-top-card--list-bullet h1',
+      '.pv-top-card--list-bullet h1 span[aria-hidden="true"]'
     ];
 
     for (const selector of nameSelectors) {
@@ -79,15 +86,32 @@
     let totalMonths = 0;
     
     try {
-      // Look for experience section
+      // Look for experience section with multiple selectors
       const experienceSection = document.querySelector('#experience') || 
                                document.querySelector('[data-section="experience"]') ||
-                               document.querySelector('.experience-section');
+                               document.querySelector('.experience-section') ||
+                               document.querySelector('#experience ~ *') ||
+                               document.querySelector('.pv-profile-section.experience-section');
       
-      if (!experienceSection) return 0;
+      if (!experienceSection) {
+        // Try to find experience entries directly
+        const experienceEntries = document.querySelectorAll('.pv-entity__date-range, .pvs-entity__caption-wrapper, .pv-entity__dates, .experience-item__duration');
+        
+        experienceEntries.forEach(entry => {
+          const dateText = entry.textContent;
+          const months = parseExperienceDuration(dateText);
+          totalMonths += months;
+        });
+        
+        if (totalMonths > 0) {
+          return Math.round(totalMonths / 12 * 10) / 10;
+        }
+        
+        return 0;
+      }
 
       // Find all experience entries
-      const experienceEntries = experienceSection.querySelectorAll('.pv-entity__date-range, .pvs-entity__caption-wrapper');
+      const experienceEntries = experienceSection.querySelectorAll('.pv-entity__date-range, .pvs-entity__caption-wrapper, .pv-entity__dates, .experience-item__duration, .pv-entity__summary-info-v2 .pv-entity__dates');
       
       experienceEntries.forEach(entry => {
         const dateText = entry.textContent;
