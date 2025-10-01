@@ -559,16 +559,27 @@
         }
       }
 
-      // Check if contact info modal is open
+      // Check if contact info modal is open with more comprehensive selectors
       const contactModalSelectors = [
         '.pv-contact-info__contact-type',
         '.ci-v2-modal',
         '.contact-info-modal',
         '.pv-contact-info',
-        '.pv-contact-info__contact-type',
         '[data-test-id="contact-info-modal"]',
         '.pv-contact-info__contact-type',
-        '.pv-contact-info__contact-type .pv-contact-info__contact-type'
+        // Additional modal selectors
+        '.pv-contact-info__contact-type .pv-contact-info__contact-type',
+        '.pv-contact-info__contact-type .pv-contact-info__contact-type .pv-contact-info__contact-type',
+        '.pv-contact-info__contact-type .pv-contact-info__contact-type .pv-contact-info__contact-type .pv-contact-info__contact-type',
+        // More specific selectors
+        '.pv-contact-info__contact-type .pv-contact-info__contact-type .pv-contact-info__contact-type .pv-contact-info__contact-type .pv-contact-info__contact-type',
+        '.pv-contact-info__contact-type .pv-contact-info__contact-type .pv-contact-info__contact-type .pv-contact-info__contact-type .pv-contact-info__contact-type .pv-contact-info__contact-type',
+        // Alternative selectors
+        '.pv-contact-info__contact-type .pv-contact-info__contact-type .pv-contact-info__contact-type .pv-contact-info__contact-type .pv-contact-info__contact-type .pv-contact-info__contact-type .pv-contact-info__contact-type',
+        '.pv-contact-info__contact-type .pv-contact-info__contact-type .pv-contact-info__contact-type .pv-contact-info__contact-type .pv-contact-info__contact-type .pv-contact-info__contact-type .pv-contact-info__contact-type .pv-contact-info__contact-type',
+        // Fallback selectors
+        '.pv-contact-info__contact-type .pv-contact-info__contact-type .pv-contact-info__contact-type .pv-contact-info__contact-type .pv-contact-info__contact-type .pv-contact-info__contact-type .pv-contact-info__contact-type .pv-contact-info__contact-type .pv-contact-info__contact-type',
+        '.pv-contact-info__contact-type .pv-contact-info__contact-type .pv-contact-info__contact-type .pv-contact-info__contact-type .pv-contact-info__contact-type .pv-contact-info__contact-type .pv-contact-info__contact-type .pv-contact-info__contact-type .pv-contact-info__contact-type .pv-contact-info__contact-type'
       ];
 
       let contactModal = null;
@@ -579,11 +590,27 @@
           break;
         }
       }
+
+      // If no modal found with selectors, try to find any modal-like element
+      if (!contactModal) {
+        console.log('No modal found with selectors, searching for any modal-like element...');
+        const allModals = document.querySelectorAll('[role="dialog"], .modal, [data-test-id*="modal"], [class*="modal"]');
+        for (const modal of allModals) {
+          const modalText = modal.textContent.toLowerCase();
+          if (modalText.includes('contact') || modalText.includes('email') || modalText.includes('phone')) {
+            contactModal = modal;
+            console.log('Found modal-like element with contact content');
+            break;
+          }
+        }
+      }
       
       if (contactModal) {
         console.log('Extracting from contact modal...');
+        console.log('Modal HTML:', contactModal.innerHTML.substring(0, 1000));
+        console.log('Modal text content:', contactModal.textContent.substring(0, 500));
         
-        // Extract email - try multiple selectors
+        // Extract email - try multiple selectors and text patterns
         const emailSelectors = [
           'a[href^="mailto:"]',
           '.pv-contact-info__contact-type a[href^="mailto:"]',
@@ -601,7 +628,18 @@
           }
         }
 
-        // Extract phone - try multiple selectors
+        // If no email found with selectors, try text pattern matching
+        if (!contactInfo.email) {
+          console.log('No email found with selectors, trying text pattern matching...');
+          const modalText = contactModal.textContent;
+          const emailMatch = modalText.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
+          if (emailMatch) {
+            contactInfo.email = emailMatch[1];
+            console.log('Found email in modal text:', contactInfo.email);
+          }
+        }
+
+        // Extract phone - try multiple selectors and text patterns
         const phoneSelectors = [
           'a[href^="tel:"]',
           '.pv-contact-info__contact-type a[href^="tel:"]',
@@ -616,6 +654,20 @@
             contactInfo.phone = phoneElement.href.replace('tel:', '');
             console.log('Found phone in modal:', contactInfo.phone);
             break;
+          }
+        }
+
+        // If no phone found with selectors, try text pattern matching
+        if (!contactInfo.phone) {
+          console.log('No phone found with selectors, trying text pattern matching...');
+          const modalText = contactModal.textContent;
+          const phoneMatch = modalText.match(/(\+?[\d\s\-\(\)]{10,})/);
+          if (phoneMatch) {
+            const phone = phoneMatch[1].trim();
+            if (phone.length >= 10 && phone.length <= 15) {
+              contactInfo.phone = phone;
+              console.log('Found phone in modal text:', contactInfo.phone);
+            }
           }
         }
 
