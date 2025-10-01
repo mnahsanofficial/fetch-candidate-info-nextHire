@@ -7,19 +7,8 @@ chrome.runtime.onInstalled.addListener(() => {
 
 // Handle messages from content script and popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.action === 'extractProfileData') {
-    // Forward extraction request to content script
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      if (tabs[0] && tabs[0].url.includes('linkedin.com')) {
-        chrome.tabs.sendMessage(tabs[0].id, { action: 'extractProfileData' }, (response) => {
-          sendResponse(response);
-        });
-      } else {
-        sendResponse({ success: false, error: 'Not on LinkedIn' });
-      }
-    });
-    return true; // Keep message channel open for async response
-  }
+  // No longer need to forward extractProfileData messages
+  // as popup now communicates directly with content script
 
   if (request.action === 'saveProfileData') {
     // Save extracted data to local storage

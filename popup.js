@@ -58,21 +58,25 @@
                 return;
             }
 
-            // Send message to content script
-            const response = await chrome.runtime.sendMessage({ action: 'extractProfileData' });
+            // Send message directly to content script
+            const response = await chrome.tabs.sendMessage(tab.id, { action: 'extractProfileData' });
             
-            if (response.success) {
+            if (response && response.success) {
                 profileData = response.data;
                 displayProfileData(profileData);
                 await saveProfileData(profileData);
                 showStatus(elements.profileStatus, 'Profile data extracted successfully!', 'success');
             } else {
-                showStatus(elements.profileStatus, response.error || 'Failed to extract profile data', 'error');
+                showStatus(elements.profileStatus, (response && response.error) || 'Failed to extract profile data', 'error');
             }
 
         } catch (error) {
             console.error('Error fetching profile:', error);
-            showStatus(elements.profileStatus, 'Error extracting profile data', 'error');
+            if (error.message && error.message.includes('Could not establish connection')) {
+                showStatus(elements.profileStatus, 'Please refresh the LinkedIn page and try again', 'error');
+            } else {
+                showStatus(elements.profileStatus, 'Error extracting profile data', 'error');
+            }
         } finally {
             setButtonLoading(elements.fetchProfileBtn, false);
         }

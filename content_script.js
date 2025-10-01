@@ -7,9 +7,15 @@
   // Listen for messages from popup
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'extractProfileData') {
-      const profileData = extractLinkedInProfileData();
-      sendResponse({ success: true, data: profileData });
+      try {
+        const profileData = extractLinkedInProfileData();
+        sendResponse({ success: true, data: profileData });
+      } catch (error) {
+        console.error('Error in content script:', error);
+        sendResponse({ success: false, error: error.message });
+      }
     }
+    return true; // Keep message channel open for async response
   });
 
   /**
