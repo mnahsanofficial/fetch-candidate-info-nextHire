@@ -112,6 +112,8 @@
     let totalMonths = 0;
     
     try {
+      console.log('Looking for experience elements...');
+      
       // Look for experience section with multiple selectors
       const experienceSection = document.querySelector('#experience') || 
                                document.querySelector('[data-section="experience"]') ||
@@ -119,37 +121,60 @@
                                document.querySelector('#experience ~ *') ||
                                document.querySelector('.pv-profile-section.experience-section');
       
-      if (!experienceSection) {
-        // Try to find experience entries directly
-        const experienceEntries = document.querySelectorAll('.pv-entity__date-range, .pvs-entity__caption-wrapper, .pv-entity__dates, .experience-item__duration');
+      if (experienceSection) {
+        console.log('Found experience section');
+        // Find all experience entries
+        const experienceEntries = experienceSection.querySelectorAll('.pv-entity__date-range, .pvs-entity__caption-wrapper, .pv-entity__dates, .experience-item__duration, .pv-entity__summary-info-v2 .pv-entity__dates');
+        console.log('Found', experienceEntries.length, 'experience entries in section');
         
         experienceEntries.forEach(entry => {
           const dateText = entry.textContent;
           const months = parseExperienceDuration(dateText);
           totalMonths += months;
         });
+      } else {
+        console.log('No experience section found, trying direct selectors...');
+        // Try to find experience entries directly with updated selectors
+        const experienceSelectors = [
+          '.pv-entity__date-range',
+          '.pvs-entity__caption-wrapper',
+          '.pv-entity__dates',
+          '.experience-item__duration',
+          '.pv-entity__summary-info-v2 .pv-entity__dates',
+          // New LinkedIn selectors
+          '.pvs-entity__caption-wrapper span',
+          '.pv-entity__date-range span',
+          '.experience-section .pv-entity__date-range',
+          '.pv-profile-section.experience-section .pv-entity__date-range',
+          '.pv-entity__summary-info-v2 .pv-entity__dates span',
+          // More specific selectors
+          '[data-section="experience"] .pv-entity__date-range',
+          '[data-section="experience"] .pvs-entity__caption-wrapper',
+          '.pv-profile-section .pv-entity__date-range',
+          '.pv-profile-section .pvs-entity__caption-wrapper'
+        ];
         
-        if (totalMonths > 0) {
-          return Math.round(totalMonths / 12 * 10) / 10;
-        }
-        
-        return 0;
+        experienceSelectors.forEach(selector => {
+          const elements = document.querySelectorAll(selector);
+          console.log(`Experience selector ${selector} found ${elements.length} elements`);
+          elements.forEach(element => {
+            const dateText = element.textContent;
+            const months = parseExperienceDuration(dateText);
+            if (months > 0) {
+              console.log('Found experience duration:', dateText, '=', months, 'months');
+            }
+            totalMonths += months;
+          });
+        });
       }
-
-      // Find all experience entries
-      const experienceEntries = experienceSection.querySelectorAll('.pv-entity__date-range, .pvs-entity__caption-wrapper, .pv-entity__dates, .experience-item__duration, .pv-entity__summary-info-v2 .pv-entity__dates');
-      
-      experienceEntries.forEach(entry => {
-        const dateText = entry.textContent;
-        const months = parseExperienceDuration(dateText);
-        totalMonths += months;
-      });
 
     } catch (error) {
       console.error('Error calculating experience:', error);
     }
 
-    return Math.round(totalMonths / 12 * 10) / 10; // Round to 1 decimal place
+    const years = Math.round(totalMonths / 12 * 10) / 10;
+    console.log('Total experience calculated:', years, 'years');
+    return years;
   }
 
   /**
@@ -190,6 +215,8 @@
     const skills = [];
     
     try {
+      console.log('Looking for skills elements...');
+      
       // Look for skills section with multiple selectors
       const skillsSection = document.querySelector('#skills') || 
                            document.querySelector('[data-section="skills"]') ||
@@ -198,68 +225,105 @@
                            document.querySelector('.pv-profile-section.skills-section');
       
       if (skillsSection) {
+        console.log('Found skills section');
         // Find skill elements with updated selectors
-        const skillElements = skillsSection.querySelectorAll(
-          '.pv-skill-category-entity__name, .pvs-entity__caption-wrapper, .skill-category-entity__name, ' +
-          '.pv-skill-category-entity__name-text, .pvs-entity__caption-wrapper span, ' +
-          '.pv-skill-category-entity__name span, .skill-category-entity__name span'
-        );
+        const skillSelectors = [
+          '.pv-skill-category-entity__name',
+          '.pvs-entity__caption-wrapper',
+          '.skill-category-entity__name',
+          '.pv-skill-category-entity__name-text',
+          '.pv-skill-category-entity__name span',
+          '.skill-category-entity__name span',
+          '.pvs-entity__caption-wrapper span',
+          '.pv-skill-category-entity__name-text span',
+          '[data-section="skills"] .pv-skill-category-entity__name',
+          '[data-section="skills"] .pvs-entity__caption-wrapper',
+          '.pv-profile-section.skills-section .pv-skill-category-entity__name',
+          '.pv-profile-section.skills-section .pvs-entity__caption-wrapper'
+        ];
         
-        skillElements.forEach(element => {
-          const skillText = element.textContent.trim();
-          if (skillText && !skills.includes(skillText) && skillText.length > 1) {
-            skills.push(skillText);
-          }
+        skillSelectors.forEach(selector => {
+          const elements = skillsSection.querySelectorAll(selector);
+          console.log(`Skills selector ${selector} found ${elements.length} elements`);
+          elements.forEach(element => {
+            const skillText = element.textContent.trim();
+            if (skillText && !skills.includes(skillText) && skillText.length > 1) {
+              skills.push(skillText);
+              console.log('Found skill:', skillText);
+            }
+          });
+        });
+      } else {
+        console.log('No skills section found, trying direct selectors...');
+        // Try direct selectors if no section found
+        const skillSelectors = [
+          '.pv-skill-category-entity__name',
+          '.pvs-entity__caption-wrapper',
+          '.skill-category-entity__name',
+          '.pv-skill-category-entity__name-text',
+          '.pv-skill-category-entity__name span',
+          '.skill-category-entity__name span'
+        ];
+        
+        skillSelectors.forEach(selector => {
+          const elements = document.querySelectorAll(selector);
+          console.log(`Direct skills selector ${selector} found ${elements.length} elements`);
+          elements.forEach(element => {
+            const skillText = element.textContent.trim();
+            if (skillText && !skills.includes(skillText) && skillText.length > 1) {
+              skills.push(skillText);
+              console.log('Found skill:', skillText);
+            }
+          });
         });
       }
 
       // Also look for skills in the "About" section
-      const aboutSection = document.querySelector('#about') || 
-                          document.querySelector('[data-section="about"]') ||
-                          document.querySelector('.pv-about-section') ||
-                          document.querySelector('.pv-about__summary-text');
+      const aboutSelectors = [
+        '#about',
+        '[data-section="about"]',
+        '.pv-about-section',
+        '.pv-about__summary-text',
+        '.pv-about__summary-text span',
+        '.pv-about__summary-text p',
+        '.pv-about__summary-text div',
+        '.pv-profile-section.about-section',
+        '.pv-profile-section.about-section .pv-about__summary-text'
+      ];
+
+      console.log('Looking for About section...');
+      let aboutSection = null;
+      for (const selector of aboutSelectors) {
+        aboutSection = document.querySelector(selector);
+        if (aboutSection) {
+          console.log('Found About section with selector:', selector);
+          break;
+        }
+      }
       
       if (aboutSection) {
         const aboutText = aboutSection.textContent.toLowerCase();
+        console.log('About section text length:', aboutText.length);
         const techKeywords = [
           'javascript', 'python', 'java', 'react', 'angular', 'vue', 'node.js', 'express',
           'mongodb', 'mysql', 'postgresql', 'aws', 'azure', 'docker', 'kubernetes',
           'git', 'github', 'gitlab', 'jenkins', 'ci/cd', 'agile', 'scrum',
           'html', 'css', 'sass', 'less', 'typescript', 'php', 'ruby', 'go',
           'c++', 'c#', '.net', 'spring', 'django', 'flask', 'laravel', 'rails',
-          'machine learning', 'ai', 'data science', 'sql', 'nosql', 'redis',
-          'elasticsearch', 'kafka', 'microservices', 'rest api', 'graphql'
+          'machine learning', 'ai', 'data science', 'sql', 'nosql', 'redis'
         ];
         
         techKeywords.forEach(keyword => {
           if (aboutText.includes(keyword) && !skills.includes(keyword)) {
             skills.push(keyword);
+            console.log('Found keyword in About section:', keyword);
           }
         });
+      } else {
+        console.log('No About section found');
       }
 
-      // Try to find skills in experience section as well
-      const experienceSection = document.querySelector('#experience') || 
-                               document.querySelector('[data-section="experience"]');
-      
-      if (experienceSection) {
-        const expText = experienceSection.textContent.toLowerCase();
-        const techKeywords = [
-          'javascript', 'python', 'java', 'react', 'angular', 'vue', 'node.js', 'express',
-          'mongodb', 'mysql', 'postgresql', 'aws', 'azure', 'docker', 'kubernetes',
-          'git', 'github', 'gitlab', 'jenkins', 'ci/cd', 'agile', 'scrum',
-          'html', 'css', 'sass', 'less', 'typescript', 'php', 'ruby', 'go',
-          'c++', 'c#', '.net', 'spring', 'django', 'flask', 'laravel'
-        ];
-        
-        techKeywords.forEach(keyword => {
-          if (expText.includes(keyword) && !skills.includes(keyword)) {
-            skills.push(keyword);
-          }
-        });
-      }
-
-      console.log('Extracted skills:', skills);
+      console.log('Total skills found:', skills.length);
 
     } catch (error) {
       console.error('Error extracting skills:', error);
@@ -279,28 +343,64 @@
     };
 
     try {
+      console.log('Looking for contact info...');
+      
       // Check if contact info modal is open
       const contactModal = document.querySelector('.pv-contact-info__contact-type, .ci-v2-modal, .contact-info-modal');
       
       if (contactModal) {
+        console.log('Found contact modal');
         // Extract email
         const emailElement = contactModal.querySelector('a[href^="mailto:"]');
         if (emailElement) {
           contactInfo.email = emailElement.href.replace('mailto:', '');
+          console.log('Found email in modal:', contactInfo.email);
         }
 
         // Extract phone
         const phoneElement = contactModal.querySelector('a[href^="tel:"]');
         if (phoneElement) {
           contactInfo.phone = phoneElement.href.replace('tel:', '');
+          console.log('Found phone in modal:', contactInfo.phone);
         }
 
         // Extract websites
         const websiteElements = contactModal.querySelectorAll('a[href^="http"]:not([href*="linkedin.com"])');
+        console.log('Found', websiteElements.length, 'websites in modal');
         websiteElements.forEach(element => {
           const url = element.href;
           if (url && !contactInfo.websites.includes(url)) {
             contactInfo.websites.push(url);
+            console.log('Found website in modal:', url);
+          }
+        });
+      } else {
+        console.log('No contact modal found, trying direct selectors...');
+        
+        // Try to find contact info directly on the page
+        const emailElement = document.querySelector('a[href^="mailto:"]');
+        if (emailElement) {
+          contactInfo.email = emailElement.href.replace('mailto:', '');
+          console.log('Found email directly:', contactInfo.email);
+        } else {
+          console.log('No email found');
+        }
+
+        const phoneElement = document.querySelector('a[href^="tel:"]');
+        if (phoneElement) {
+          contactInfo.phone = phoneElement.href.replace('tel:', '');
+          console.log('Found phone directly:', contactInfo.phone);
+        } else {
+          console.log('No phone found');
+        }
+
+        const websiteElements = document.querySelectorAll('a[href^="http"]:not([href*="linkedin.com"])');
+        console.log('Found', websiteElements.length, 'website links directly');
+        websiteElements.forEach(element => {
+          const url = element.href;
+          if (url && !contactInfo.websites.includes(url)) {
+            contactInfo.websites.push(url);
+            console.log('Found website directly:', url);
           }
         });
       }
@@ -309,6 +409,7 @@
       console.error('Error extracting contact info:', error);
     }
 
+    console.log('Final contact info:', contactInfo);
     return contactInfo;
   }
 
