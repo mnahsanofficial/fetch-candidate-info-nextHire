@@ -320,38 +320,64 @@
                 }
             }
 
-            // Extract experience
+            // Extract experience with updated selectors
             let totalMonths = 0;
             const experienceSelectors = [
                 '.pv-entity__date-range',
                 '.pvs-entity__caption-wrapper',
                 '.pv-entity__dates',
                 '.experience-item__duration',
-                '.pv-entity__summary-info-v2 .pv-entity__dates'
+                '.pv-entity__summary-info-v2 .pv-entity__dates',
+                // New LinkedIn selectors
+                '.pvs-entity__caption-wrapper span',
+                '.pv-entity__date-range span',
+                '.experience-section .pv-entity__date-range',
+                '.pv-profile-section.experience-section .pv-entity__date-range',
+                '.pv-entity__summary-info-v2 .pv-entity__dates span',
+                '.pvs-entity__caption-wrapper',
+                '.pv-entity__date-range',
+                // More specific selectors
+                '[data-section="experience"] .pv-entity__date-range',
+                '[data-section="experience"] .pvs-entity__caption-wrapper',
+                '.pv-profile-section .pv-entity__date-range',
+                '.pv-profile-section .pvs-entity__caption-wrapper'
             ];
 
+            console.log('Looking for experience elements...');
             experienceSelectors.forEach(selector => {
                 const elements = document.querySelectorAll(selector);
+                console.log(`Selector ${selector} found ${elements.length} elements`);
                 elements.forEach(element => {
                     const text = element.textContent.toLowerCase();
+                    console.log('Experience text:', text);
+                    
                     const yearMatch = text.match(/(\d+)\s*(?:year|yr|y)/);
                     const monthMatch = text.match(/(\d+)\s*(?:month|mo|mos)/);
                     
-                    if (yearMatch) totalMonths += parseInt(yearMatch[1]) * 12;
-                    if (monthMatch) totalMonths += parseInt(monthMatch[1]);
+                    if (yearMatch) {
+                        totalMonths += parseInt(yearMatch[1]) * 12;
+                        console.log('Found years:', yearMatch[1]);
+                    }
+                    if (monthMatch) {
+                        totalMonths += parseInt(monthMatch[1]);
+                        console.log('Found months:', monthMatch[1]);
+                    }
                     
                     const dateRangeMatch = text.match(/(\d{4})\s*[-–]\s*(?:present|current|now|\d{4})/);
                     if (dateRangeMatch) {
                         const startYear = parseInt(dateRangeMatch[1]);
                         const currentYear = new Date().getFullYear();
-                        totalMonths += (currentYear - startYear) * 12;
+                        const years = (currentYear - startYear) * 12;
+                        totalMonths += years;
+                        console.log('Found date range:', dateRangeMatch[1], 'to present, years:', years/12);
                     }
                 });
             });
 
             profileData.totalYearsExperience = Math.round(totalMonths / 12 * 10) / 10;
+            console.log('Total experience calculated:', profileData.totalYearsExperience, 'years');
 
-            // Extract skills
+            // Extract skills with updated selectors
             const skills = [];
             const skillSelectors = [
                 '.pv-skill-category-entity__name',
@@ -359,27 +385,60 @@
                 '.skill-category-entity__name',
                 '.pv-skill-category-entity__name-text',
                 '.pv-skill-category-entity__name span',
-                '.skill-category-entity__name span'
+                '.skill-category-entity__name span',
+                // New LinkedIn selectors
+                '.pvs-entity__caption-wrapper span',
+                '.pv-skill-category-entity__name-text span',
+                '[data-section="skills"] .pv-skill-category-entity__name',
+                '[data-section="skills"] .pvs-entity__caption-wrapper',
+                '.pv-profile-section.skills-section .pv-skill-category-entity__name',
+                '.pv-profile-section.skills-section .pvs-entity__caption-wrapper',
+                // More specific selectors
+                '.pv-skill-category-entity__name-text',
+                '.pvs-entity__caption-wrapper',
+                '.pv-skill-category-entity__name',
+                '.skill-category-entity__name'
             ];
 
+            console.log('Looking for skills elements...');
             skillSelectors.forEach(selector => {
                 const elements = document.querySelectorAll(selector);
+                console.log(`Skills selector ${selector} found ${elements.length} elements`);
                 elements.forEach(element => {
                     const skillText = element.textContent.trim();
                     if (skillText && !skills.includes(skillText) && skillText.length > 1) {
                         skills.push(skillText);
+                        console.log('Found skill:', skillText);
                     }
                 });
             });
 
             // Also extract from About and Experience sections
-            const aboutSection = document.querySelector('#about') || 
-                               document.querySelector('[data-section="about"]') ||
-                               document.querySelector('.pv-about-section') ||
-                               document.querySelector('.pv-about__summary-text');
+            const aboutSelectors = [
+                '#about',
+                '[data-section="about"]',
+                '.pv-about-section',
+                '.pv-about__summary-text',
+                '.pv-about__summary-text span',
+                '.pv-about__summary-text p',
+                '.pv-about__summary-text div',
+                '.pv-profile-section.about-section',
+                '.pv-profile-section.about-section .pv-about__summary-text'
+            ];
+
+            console.log('Looking for About section...');
+            let aboutSection = null;
+            for (const selector of aboutSelectors) {
+                aboutSection = document.querySelector(selector);
+                if (aboutSection) {
+                    console.log('Found About section with selector:', selector);
+                    break;
+                }
+            }
 
             if (aboutSection) {
                 const aboutText = aboutSection.textContent.toLowerCase();
+                console.log('About section text length:', aboutText.length);
                 const techKeywords = [
                     'javascript', 'python', 'java', 'react', 'angular', 'vue', 'node.js', 'express',
                     'mongodb', 'mysql', 'postgresql', 'aws', 'azure', 'docker', 'kubernetes',
@@ -392,30 +451,46 @@
                 techKeywords.forEach(keyword => {
                     if (aboutText.includes(keyword) && !skills.includes(keyword)) {
                         skills.push(keyword);
+                        console.log('Found keyword in About section:', keyword);
                     }
                 });
+            } else {
+                console.log('No About section found');
             }
 
             profileData.techStack = skills.slice(0, 20);
+            console.log('Total skills found:', skills.length);
 
-            // Extract contact info
+            // Extract contact info with better selectors
+            console.log('Looking for contact info...');
+            
             const emailElement = document.querySelector('a[href^="mailto:"]');
             if (emailElement) {
                 profileData.contactInfo.email = emailElement.href.replace('mailto:', '');
+                console.log('Found email:', profileData.contactInfo.email);
+            } else {
+                console.log('No email found');
             }
 
             const phoneElement = document.querySelector('a[href^="tel:"]');
             if (phoneElement) {
                 profileData.contactInfo.phone = phoneElement.href.replace('tel:', '');
+                console.log('Found phone:', profileData.contactInfo.phone);
+            } else {
+                console.log('No phone found');
             }
 
             const websiteElements = document.querySelectorAll('a[href^="http"]:not([href*="linkedin.com"])');
+            console.log('Found', websiteElements.length, 'website links');
             websiteElements.forEach(element => {
                 const url = element.href;
                 if (url && !profileData.contactInfo.websites.includes(url)) {
                     profileData.contactInfo.websites.push(url);
+                    console.log('Found website:', url);
                 }
             });
+
+            console.log('Final extracted data:', profileData);
 
         } catch (error) {
             console.error('Error extracting profile data:', error);
