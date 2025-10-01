@@ -8,7 +8,9 @@
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'extractProfileData') {
       try {
+        console.log('Content script received extractProfileData request');
         const profileData = extractLinkedInProfileData();
+        console.log('Extracted profile data:', profileData);
         sendResponse({ success: true, data: profileData });
       } catch (error) {
         console.error('Error in content script:', error);
@@ -17,6 +19,9 @@
     }
     return true; // Keep message channel open for async response
   });
+
+  // Log that content script is loaded
+  console.log('LinkedIn Contact Extractor content script loaded');
 
   /**
    * Extract profile data from LinkedIn DOM
@@ -59,7 +64,7 @@
    * Extract name from profile header
    */
   function extractName() {
-    // Try multiple selectors for name
+    // Try multiple selectors for name (updated for current LinkedIn)
     const nameSelectors = [
       'h1.text-heading-xlarge',
       'h1[data-generated-suggestion-target]',
@@ -72,16 +77,31 @@
       'h1.break-words span[aria-hidden="true"]',
       '.pv-text-details__left-panel h1',
       '.pv-top-card--list-bullet h1',
-      '.pv-top-card--list-bullet h1 span[aria-hidden="true"]'
+      '.pv-top-card--list-bullet h1 span[aria-hidden="true"]',
+      // New LinkedIn selectors
+      'h1[data-anonymize="person-name"] span[aria-hidden="true"]',
+      '.pv-text-details__left-panel h1 span:not([aria-hidden="false"])',
+      '.pv-top-card--list-bullet h1 span:not([aria-hidden="false"])',
+      'h1.break-words span:not([aria-hidden="false"])',
+      // Fallback selectors
+      'h1',
+      '.pv-text-details__left-panel h1',
+      '.pv-top-card--list-bullet h1'
     ];
 
     for (const selector of nameSelectors) {
       const nameElement = document.querySelector(selector);
       if (nameElement && nameElement.textContent.trim()) {
-        return nameElement.textContent.trim();
+        const name = nameElement.textContent.trim();
+        // Filter out common non-name text
+        if (name && name.length > 1 && !name.includes('LinkedIn') && !name.includes('Profile')) {
+          console.log('Found name with selector:', selector, 'Name:', name);
+          return name;
+        }
       }
     }
 
+    console.log('No name found with any selector');
     return '';
   }
 
@@ -170,29 +190,60 @@
     const skills = [];
     
     try {
-      // Look for skills section
+      // Look for skills section with multiple selectors
       const skillsSection = document.querySelector('#skills') || 
                            document.querySelector('[data-section="skills"]') ||
-                           document.querySelector('.skills-section');
+                           document.querySelector('.skills-section') ||
+                           document.querySelector('#skills ~ *') ||
+                           document.querySelector('.pv-profile-section.skills-section');
       
-      if (!skillsSection) return skills;
-
-      // Find skill elements
-      const skillElements = skillsSection.querySelectorAll('.pv-skill-category-entity__name, .pvs-entity__caption-wrapper, .skill-category-entity__name');
-      
-      skillElements.forEach(element => {
-        const skillText = element.textContent.trim();
-        if (skillText && !skills.includes(skillText)) {
-          skills.push(skillText);
-        }
-      });
+      if (skillsSection) {
+        // Find skill elements with updated selectors
+        const skillElements = skillsSection.querySelectorAll(
+          '.pv-skill-category-entity__name, .pvs-entity__caption-wrapper, .skill-category-entity__name, ' +
+          '.pv-skill-category-entity__name-text, .pvs-entity__caption-wrapper span, ' +
+          '.pv-skill-category-entity__name span, .skill-category-entity__name span'
+        );
+        
+        skillElements.forEach(element => {
+          const skillText = element.textContent.trim();
+          if (skillText && !skills.includes(skillText) && skillText.length > 1) {
+            skills.push(skillText);
+          }
+        });
+      }
 
       // Also look for skills in the "About" section
       const aboutSection = document.querySelector('#about') || 
-                          document.querySelector('[data-section="about"]');
+                          document.querySelector('[data-section="about"]') ||
+                          document.querySelector('.pv-about-section') ||
+                          document.querySelector('.pv-about__summary-text');
       
       if (aboutSection) {
         const aboutText = aboutSection.textContent.toLowerCase();
+        const techKeywords = [
+          'javascript', 'python', 'java', 'react', 'angular', 'vue', 'node.js', 'express',
+          'mongodb', 'mysql', 'postgresql', 'aws', 'azure', 'docker', 'kubernetes',
+          'git', 'github', 'gitlab', 'jenkins', 'ci/cd', 'agile', 'scrum',
+          'html', 'css', 'sass', 'less', 'typescript', 'php', 'ruby', 'go',
+          'c++', 'c#', '.net', 'spring', 'django', 'flask', 'laravel', 'rails',
+          'machine learning', 'ai', 'data science', 'sql', 'nosql', 'redis',
+          'elasticsearch', 'kafka', 'microservices', 'rest api', 'graphql'
+        ];
+        
+        techKeywords.forEach(keyword => {
+          if (aboutText.includes(keyword) && !skills.includes(keyword)) {
+            skills.push(keyword);
+          }
+        });
+      }
+
+      // Try to find skills in experience section as well
+      const experienceSection = document.querySelector('#experience') || 
+                               document.querySelector('[data-section="experience"]');
+      
+      if (experienceSection) {
+        const expText = experienceSection.textContent.toLowerCase();
         const techKeywords = [
           'javascript', 'python', 'java', 'react', 'angular', 'vue', 'node.js', 'express',
           'mongodb', 'mysql', 'postgresql', 'aws', 'azure', 'docker', 'kubernetes',
@@ -202,11 +253,13 @@
         ];
         
         techKeywords.forEach(keyword => {
-          if (aboutText.includes(keyword) && !skills.includes(keyword)) {
+          if (expText.includes(keyword) && !skills.includes(keyword)) {
             skills.push(keyword);
           }
         });
       }
+
+      console.log('Extracted skills:', skills);
 
     } catch (error) {
       console.error('Error extracting skills:', error);

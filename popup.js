@@ -58,6 +58,20 @@
                 return;
             }
 
+            // Try to inject content script if not already injected
+            try {
+                await chrome.scripting.executeScript({
+                    target: { tabId: tab.id },
+                    files: ['content_script.js']
+                });
+            } catch (injectError) {
+                // Content script might already be injected, continue
+                console.log('Content script injection result:', injectError.message);
+            }
+
+            // Wait a moment for script to initialize
+            await new Promise(resolve => setTimeout(resolve, 100));
+
             // Send message directly to content script
             const response = await chrome.tabs.sendMessage(tab.id, { action: 'extractProfileData' });
             
