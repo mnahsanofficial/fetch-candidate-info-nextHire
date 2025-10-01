@@ -7,15 +7,17 @@
   // Listen for messages from popup
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'extractProfileData') {
-      try {
-        console.log('Content script received extractProfileData request');
-        const profileData = extractLinkedInProfileData();
-        console.log('Extracted profile data:', profileData);
-        sendResponse({ success: true, data: profileData });
-      } catch (error) {
-        console.error('Error in content script:', error);
-        sendResponse({ success: false, error: error.message });
-      }
+      (async () => {
+        try {
+          console.log('Content script received extractProfileData request');
+          const profileData = await extractLinkedInProfileData();
+          console.log('Extracted profile data:', profileData);
+          sendResponse({ success: true, data: profileData });
+        } catch (error) {
+          console.error('Error in content script:', error);
+          sendResponse({ success: false, error: error.message });
+        }
+      })();
     }
     return true; // Keep message channel open for async response
   });
@@ -27,7 +29,7 @@
    * Extract profile data from LinkedIn DOM
    * Only extracts visible data, never hidden fields
    */
-  function extractLinkedInProfileData() {
+  async function extractLinkedInProfileData() {
     const profileData = {
       name: '',
       totalYearsExperience: 0,
@@ -50,8 +52,8 @@
       // Extract tech stack/skills
       profileData.techStack = extractTechStack();
       
-      // Extract contact info (if contact info modal is visible)
-      profileData.contactInfo = extractContactInfo();
+      // Extract contact info (now async - will try to open modal)
+      profileData.contactInfo = await extractContactInfo();
 
     } catch (error) {
       console.error('Error extracting profile data:', error);
@@ -151,7 +153,15 @@
           '[data-section="experience"] .pv-entity__date-range',
           '[data-section="experience"] .pvs-entity__caption-wrapper',
           '.pv-profile-section .pv-entity__date-range',
-          '.pv-profile-section .pvs-entity__caption-wrapper'
+          '.pv-profile-section .pvs-entity__caption-wrapper',
+          // Additional current LinkedIn selectors
+          '.pvs-entity__caption-wrapper',
+          '.pvs-entity__caption-wrapper .t-14',
+          '.pvs-entity__caption-wrapper .t-12',
+          '.pv-entity__date-range .t-14',
+          '.pv-entity__date-range .t-12',
+          '.pv-entity__dates .t-14',
+          '.pv-entity__dates .t-12'
         ];
         
         experienceSelectors.forEach(selector => {
@@ -335,7 +345,7 @@
   /**
    * Extract contact info from contact info modal (if visible)
    */
-  function extractContactInfo() {
+  async function extractContactInfo() {
     const contactInfo = {
       email: '',
       phone: '',
@@ -345,23 +355,93 @@
     try {
       console.log('Looking for contact info...');
       
+      // First try to find and click the contact info button to open modal
+      const contactButtonSelectors = [
+        'button[aria-label*="Contact info"]',
+        'button[aria-label*="Contact"]',
+        '.pv-s-profile-actions__action--contact',
+        '.pv-s-profile-actions__action',
+        'button[data-control-name="contact_see_more"]',
+        '.pv-s-profile-actions button',
+        'button:contains("Contact info")',
+        'button:contains("Contact")'
+      ];
+
+      let contactButton = null;
+      for (const selector of contactButtonSelectors) {
+        contactButton = document.querySelector(selector);
+        if (contactButton) {
+          console.log('Found contact button with selector:', selector);
+          break;
+        }
+      }
+
+      if (contactButton) {
+        console.log('Clicking contact info button...');
+        contactButton.click();
+        
+        // Wait for modal to open
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+
       // Check if contact info modal is open
-      const contactModal = document.querySelector('.pv-contact-info__contact-type, .ci-v2-modal, .contact-info-modal');
+      const contactModalSelectors = [
+        '.pv-contact-info__contact-type',
+        '.ci-v2-modal',
+        '.contact-info-modal',
+        '.pv-contact-info',
+        '.pv-contact-info__contact-type',
+        '[data-test-id="contact-info-modal"]',
+        '.pv-contact-info__contact-type',
+        '.pv-contact-info__contact-type .pv-contact-info__contact-type'
+      ];
+
+      let contactModal = null;
+      for (const selector of contactModalSelectors) {
+        contactModal = document.querySelector(selector);
+        if (contactModal) {
+          console.log('Found contact modal with selector:', selector);
+          break;
+        }
+      }
       
       if (contactModal) {
-        console.log('Found contact modal');
-        // Extract email
-        const emailElement = contactModal.querySelector('a[href^="mailto:"]');
-        if (emailElement) {
-          contactInfo.email = emailElement.href.replace('mailto:', '');
-          console.log('Found email in modal:', contactInfo.email);
+        console.log('Extracting from contact modal...');
+        
+        // Extract email - try multiple selectors
+        const emailSelectors = [
+          'a[href^="mailto:"]',
+          '.pv-contact-info__contact-type a[href^="mailto:"]',
+          '.ci-v2-modal a[href^="mailto:"]',
+          '.contact-info-modal a[href^="mailto:"]',
+          'a[href*="mailto:"]'
+        ];
+
+        for (const selector of emailSelectors) {
+          const emailElement = contactModal.querySelector(selector);
+          if (emailElement) {
+            contactInfo.email = emailElement.href.replace('mailto:', '');
+            console.log('Found email in modal:', contactInfo.email);
+            break;
+          }
         }
 
-        // Extract phone
-        const phoneElement = contactModal.querySelector('a[href^="tel:"]');
-        if (phoneElement) {
-          contactInfo.phone = phoneElement.href.replace('tel:', '');
-          console.log('Found phone in modal:', contactInfo.phone);
+        // Extract phone - try multiple selectors
+        const phoneSelectors = [
+          'a[href^="tel:"]',
+          '.pv-contact-info__contact-type a[href^="tel:"]',
+          '.ci-v2-modal a[href^="tel:"]',
+          '.contact-info-modal a[href^="tel:"]',
+          'a[href*="tel:"]'
+        ];
+
+        for (const selector of phoneSelectors) {
+          const phoneElement = contactModal.querySelector(selector);
+          if (phoneElement) {
+            contactInfo.phone = phoneElement.href.replace('tel:', '');
+            console.log('Found phone in modal:', contactInfo.phone);
+            break;
+          }
         }
 
         // Extract websites
